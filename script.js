@@ -2,10 +2,24 @@ const size = 15;
 const board = [];
 let currentPlayer = '⚫';
 const moveStack = [];
+const socket = io();
+const room = 'room1'; // 假設玩家都進入同一個房間
 
 const gameBoard = document.getElementById('game-board');
 const message = document.getElementById('message');
 const undoButton = document.getElementById('undo-button');
+
+socket.emit('join', room);
+
+socket.on('update', (newBoard) => {
+    for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+            board[i][j] = newBoard[i][j];
+            const cell = document.querySelector(`[data-row='${i}'][data-col='${j}']`);
+            cell.textContent = newBoard[i][j];
+        }
+    }
+});
 
 function initBoard() {
     for (let i = 0; i < size; i++) {
@@ -28,37 +42,8 @@ function handleCellClick(event) {
     const row = event.target.dataset.row;
     const col = event.target.dataset.col;
     if (board[row][col] === ' ' && !message.textContent) {
-        board[row][col] = currentPlayer;
-        event.target.textContent = currentPlayer;
-        moveStack.push({row, col});
-        if (checkWin(row, col)) {
-            showMessage(`玩家 ${currentPlayer} 贏了！`);
-        } else {
-            currentPlayer = currentPlayer === '⚫' ? '⚪' : '⚫';
-        }
+        socket.emit('move', { room, row, col, player: currentPlayer });
     }
-}
-
-function checkWin(row, col) {
-    row = parseInt(row);
-    col = parseInt(col);
-    const directions = [
-        {dx: 1, dy: 0}, {dx: 0, dy: 1}, {dx: 1, dy: 1}, {dx: 1, dy: -1}
-    ];
-    for (const {dx, dy} of directions) {
-        let count = 1;
-        for (let step of [1, -1]) {
-            let x = row + dx * step;
-            let y = col + dy * step;
-            while (x >= 0 && x < size && y >= 0 && y < size && board[x][y] === currentPlayer) {
-                count++;
-                x += dx * step;
-                y += dy * step;
-            }
-        }
-        if (count >= 5) return true;
-    }
-    return false;
 }
 
 function showMessage(msg) {
